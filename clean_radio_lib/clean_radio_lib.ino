@@ -71,12 +71,14 @@ class Radio {
       _siglvl = wIn >> 4;
 
       wIn = _myWire.read();
+
+      delay(50);
     }
 
 
 //  Set Functions
-    void setFrequency(float frequency) {
-      if (frequency < 87.5 || frequency > 108.0) return false;
+    bool setFrequency(float frequency) {
+      if (frequency < 87.50 || frequency > 108.00) return false;
 
       unsigned int frequencyB = (frequency * 1000000 + 225000) / 8192;
       _frequencyH = frequencyB >> 8;
@@ -86,6 +88,11 @@ class Radio {
       
       return true;
     }
+
+    void toggleMute(){
+      _muted = !_muted
+    }
+
 
 //  Get Functions
     bool isMuted(){
@@ -104,6 +111,11 @@ class Radio {
       return (freqI * 8192 - 225000) / 1000000.00; 
     }
 
+    bool isStereo(){
+    getValues();
+    return _stereo;
+    }
+
 
 };
 
@@ -115,7 +127,7 @@ void setup() {
   Serial.begin(9600);
 
   radio1.begin();
-  radio1.setFrequency(100.3);
+  radio1.setFrequency(106.7);
 }
 
 void loop() {
@@ -126,6 +138,10 @@ void loop() {
 
   Serial.print("Is Muted: ");
   Serial.print(radio1.isMuted());
+  Serial.print(" - ");
+
+  Serial.print("Is Stereo: ");
+  Serial.print(radio1.isStereo());
   Serial.print(" - ");
 
   Serial.print("Signal Level: ");
