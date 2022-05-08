@@ -7,7 +7,7 @@
 #define DT 11
 #define SW 12
 
-float counter = 100.30;
+float frequency = 100.30;
 int currentStateCLK;
 int lastStateCLK;
 String currentDir = "";
@@ -15,8 +15,12 @@ unsigned long lastButtonPress = 0;
 
 boolean cursorTriggerd = false;
 unsigned long cursorTriggeredTime = 0;
-int cursorLoc = 0;
+int cursorLoc = -1;
 bool updateScreen = true;
+
+int currentRadio = 0;
+bool makeChange = false;
+//int updateTime;
 
 
 class Radio {
@@ -107,21 +111,28 @@ class Radio {
     }
 
     void toggleMute() {
+      getValues();
       _muted = !_muted;
+
+      sendValues();
     }
 
 
     //  Get Functions
     char isMuted() {
       getValues();
-      
-      if (_muted){return 'L';}
-      else {return 'M';}
+
+      if (_muted) {
+        return 'L';
+      }
+      else {
+        return 'M';
+      }
     }
 
     String getSignalLevel() {
       getValues();
-//      return String(_siglvl, HEX);
+      //      return String(_siglvl, HEX);
       return String(_siglvl, DEC);
     }
 
@@ -133,8 +144,12 @@ class Radio {
 
     char isStereo() {
       getValues();
-      if (_stereo){return 'S';}
-      else {return 'M';}
+      if (_stereo) {
+        return 'S';
+      }
+      else {
+        return 'M';
+      }
     }
 
 
@@ -142,10 +157,14 @@ class Radio {
 
 
 // sdaPin, sclPin
-Radio radio1(2, 3);
+//Radio radio1(2, 3);
+//Radio radio2(4, 5);
 
 LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
+Radio myRadios[] = {Radio(2, 3), Radio(4, 5)};
+
+#define radiosLength (sizeof(myRadios) / sizeof(myRadios[0]))
 
 void setup() {
 
@@ -159,39 +178,42 @@ void setup() {
   // Read the initial state of Rotary encoder CLK
   lastStateCLK = digitalRead(CLK);
 
-  radio1.begin();
-  radio1.setFrequency(100.3);
+  // Setup the radios
+  myRadios[0].begin();
+  myRadios[0].setFrequency(100.3);
+  myRadios[1].begin();
+  myRadios[1].setFrequency(96.0);
 
   initScreen();
-  delay(2000);
+  //  delay(2000);
+
 }
 
 void loop() {
 
-  
+
   readRotation();
   readButn();
-  
 
   displayMenu();
   checkCursor();
-
 }
 
-void readButn(){
+
+void readButn() {
 
   // Read the button state and debounce
   int btnState = digitalRead(SW);
   if (btnState == LOW) {
     if (millis() - lastButtonPress > 50) {
       Serial.println("Button pressed!");
-      setCursorPos(cursorLoc);
-      
-      if (cursorLoc == 2){
+
+      cursorLoc += 1;
+      if (cursorLoc > 2) {
         cursorLoc = 0;
-      }else{
-        cursorLoc +=1;
       }
+
+      setCursorPos(cursorLoc);
     }
     // Remember last button press event
     lastButtonPress = millis();
@@ -201,110 +223,184 @@ void readButn(){
   delay(1);
 }
 
-void readRotation(){
+void readRotation() {
+
+  // Only get readings if in triggered mode
+  if (!cursorTriggerd) {
+    return;
+  }
 
   // Read the current state of CLK
   currentStateCLK = digitalRead(CLK);
 
   // React to only 1 state change to avoid double count
   if (currentStateCLK != lastStateCLK  && currentStateCLK == 1) {
-    
+
     // If the DT state is different than the CLK state then
     // the encoder is rotating CCW so decrement
     if (digitalRead(DT) != currentStateCLK) {
-      counter = counter - 0.05;
-      radio1.setFrequency(counter);
-      currentDir = "CCW";
-      
-      serialDisplayInfo();
-      updateScreen = true;
-      
+
+
+      currentDir = "SUB";
+      makeChange = true;
+
+
+
     } else {
       // Encoder is rotating CW so increment
-      counter = counter + 0.05;
-      radio1.setFrequency(counter);
-      currentDir = "CW";
-      
-      serialDisplayInfo();
-      updateScreen = true;
-      
+
+      currentDir = "ADD";
+      makeChange = true;
+
     }
 
-    Serial.print("Direction: ");
-    Serial.print(currentDir);
-    Serial.print(" | Counter: ");
-    Serial.println(counter);
+    // Function calling logic
+    if (makeChange) {
+      // Function calling logic
+      if (cursorLoc == 0) {
+        changeRadioIndex(currentDir);
+      } else if (cursorLoc == 1) {
+        changeRadioFrequency(currentDir);
+      }else if (cursorLoc == 2) {
+        changeRadioMute();
+      }
+
+      serialDisplayInfo();
+      updateScreen = true;
+      makeChange = false;
+    }
+
+    // Reset the cursor active time whenever a rotation is triggered while cursor is still active
+    if (cursorTriggerd) {
+      cursorTriggeredTime = millis();
+    }
+
+
   }
   // Remember last CLK state
   lastStateCLK = currentStateCLK;
-  
+
+
+}
+
+void changeRadioMute(){
+  myRadios[currentRadio].toggleMute();
+}
+
+void changeRadioFrequency(String dir) {
+  if (dir == "ADD") {
+
+    frequency = myRadios[currentRadio].getFrequency() + 0.1;
+    myRadios[currentRadio].setFrequency(frequency);
+
+    //    Serial.print("Change radio ");
+    //    Serial.print(currentRadio);
+    //    Serial.print("Frequency to ");
+    //    Serial.println(frequency);
+  } else if (dir == "SUB") {
+
+    frequency = myRadios[currentRadio].getFrequency() - 0.1;
+    myRadios[currentRadio].setFrequency(frequency);
+
+    //    Serial.print("Change radio ");
+    //    Serial.print(currentRadio);
+    //    Serial.print("Frequency to ");
+    //    Serial.println(frequency);
+  }
+}
+
+void changeRadioIndex(String dir) {
+  if (dir == "ADD") {
+    currentRadio += 1;
+    if (currentRadio >= radiosLength) {
+      currentRadio = 0;
+    }
+    Serial.print("Adding radio index to ");
+    Serial.println(currentRadio);
+
+  } else {
+    currentRadio -= 1;
+    if (currentRadio < 0) {
+      currentRadio = radiosLength - 1;
+    }
+    Serial.print("Subtracting radio index to ");
+    Serial.println(currentRadio);
+  }
 }
 
 void serialDisplayInfo() {
   Serial.print("Frequency: ");
-  Serial.print(radio1.getFrequency());
+  Serial.print(myRadios[currentRadio].getFrequency());
   Serial.print(" MHz :: ");
 
   Serial.print("Is Muted: ");
-  Serial.print(radio1.isMuted());
+  Serial.print(myRadios[currentRadio].isMuted());
   Serial.print(" :: ");
 
   Serial.print("Is Stereo: ");
-  Serial.print(radio1.isStereo());
+  Serial.print(myRadios[currentRadio].isStereo());
   Serial.print(" :: ");
 
   Serial.print("Signal Level: ");
-  Serial.print(radio1.getSignalLevel());
+  Serial.print(myRadios[currentRadio].getSignalLevel());
   Serial.println(" ");
 
+  Serial.print("Direction: ");
+  Serial.print(currentDir);
+  Serial.print(" | Counter: ");
+  Serial.println(cursorLoc);
 }
 
 void displayMenu() {
-  if(updateScreen) {
+  if (updateScreen) {
     lcd.clear();
     lcd.print("Radio ");
-    lcd.print("01");
-    
-    lcd.setCursor(0,1);
-    lcd.print("Freq ");
-    lcd.print(radio1.getFrequency());
+    lcd.print("0");
+    lcd.print(currentRadio + 1);
 
-    lcd.setCursor(12,1);
-    lcd.print(radio1.isMuted());
-    lcd.print(radio1.isStereo());
-    lcd.print(radio1.getSignalLevel());
-    
+    lcd.setCursor(0, 1);
+    lcd.print("Freq ");
+    lcd.print(myRadios[currentRadio].getFrequency());
+
+    lcd.setCursor(12, 1);
+    lcd.print(myRadios[currentRadio].isMuted());
+    lcd.print(myRadios[currentRadio].isStereo());
+    lcd.print(myRadios[currentRadio].getSignalLevel());
+
+    setCursorPos(cursorLoc);
     updateScreen = false;
   }
 }
 
 void initScreen() {
-  
+
+  // double init to clear any previous text
   lcd.init();
-  lcd.init(); // double init clears any previous text
+  lcd.init();
+
   // Print a message to the LCD.
   lcd.backlight();
-  lcd.setCursor(1,0);
+  lcd.setCursor(1, 0);
   lcd.print("Globetrack INT");
-  lcd.setCursor(4,1);
+  lcd.setCursor(4, 1);
   lcd.print("RADIOS");
 
 }
 
-void setCursorPos(int index){
-  if(index == 0){
+void setCursorPos(int index) {
+  if (index == 0) {
     lcd.setCursor(0, 0);
     lcd.blink();
     cursorTriggerd = true;
     cursorTriggeredTime = millis();
   }
-  else if(index == 1){
+  else if (index == 1) {
     lcd.setCursor(0, 1);
     lcd.blink();
     cursorTriggerd = true;
     cursorTriggeredTime = millis();
   }
-  else if(index == 2){
+  else if (index == 2) {
     lcd.setCursor(12, 1);
     lcd.blink();
     cursorTriggerd = true;
@@ -313,13 +409,14 @@ void setCursorPos(int index){
 
 }
 
-void checkCursor(){
-  if(cursorTriggerd){
+void checkCursor() {
+  if (cursorTriggerd) {
     // Wait for 5 seconds from being triggered then turn off
-    if(millis() >= cursorTriggeredTime + 5000){
+    if (millis() >= cursorTriggeredTime + 5000) {
       lcd.noBlink();
       cursorTriggerd = false;
-      cursorLoc = 0;
+      cursorLoc = -1;
+      lcd.setCursor(0, 0);
     }
   }
 }
