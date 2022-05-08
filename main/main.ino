@@ -1,3 +1,19 @@
+/*
+Citizen FM - 106.7
+Inooro FM - 88.9**
+Ramogi FM - 107.1
+Hot96 FM - 96.0
+Bahari FM - 
+Egesa FM - 98.6
+Mulembe FM - 97.9
+Musyi FM - 102.2
+Muuga FM - 88.9
+Chamgei FM - 90.4
+Wimwaro FM - 93.0
+Sulwe FM - 89.6
+Vuuka FM - 95.4
+*/
+
 
 #include <SoftwareWire.h>
 #include <LiquidCrystal_I2C.h>
