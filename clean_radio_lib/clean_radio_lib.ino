@@ -72,7 +72,7 @@ class Radio {
 
       wIn = _myWire.read();
 
-      delay(50);
+      delay(10);
     }
 
 
@@ -90,7 +90,7 @@ class Radio {
     }
 
     void toggleMute(){
-      _muted = !_muted
+      _muted = !_muted;
     }
 
 
@@ -119,15 +119,15 @@ class Radio {
 
 };
 
-
+// sdaPin, sclPin
 Radio radio1(2, 3);
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   radio1.begin();
-  radio1.setFrequency(106.7);
+  radio1.setFrequency(100.3);
 }
 
 void loop() {
