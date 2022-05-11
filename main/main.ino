@@ -1,17 +1,17 @@
 /*
-Citizen FM - 106.7
-Inooro FM - 88.9**
-Ramogi FM - 107.1
-Hot96 FM - 96.0
-Bahari FM - 
-Egesa FM - 98.6
-Mulembe FM - 97.9
-Musyi FM - 102.2
-Muuga FM - 88.9
-Chamgei FM - 90.4
-Wimwaro FM - 93.0
-Sulwe FM - 89.6
-Vuuka FM - 95.4
+  Citizen FM - 106.7
+  Inooro FM - 88.9**
+  Ramogi FM - 107.1
+  Hot96 FM - 96.0
+  Bahari FM -
+  Egesa FM - 98.6
+  Mulembe FM - 97.9
+  Musyi FM - 102.2
+  Muuga FM - 88.9
+  Chamgei FM - 90.4
+  Wimwaro FM - 93.0
+  Sulwe FM - 89.6
+  Vuuka FM - 95.4
 */
 
 
@@ -35,7 +35,7 @@ int cursorLoc = -1;
 bool updateScreen = true;
 float freqDx = 0.01;
 
-int currentRadio = 0;
+long int currentRadio = 0;
 bool makeChange = false;
 //int updateTime;
 
@@ -51,13 +51,15 @@ class Radio {
     bool _muted, _stereo;
     byte _frequencyH, _frequencyL;
     short _siglvl, _rdy;
+    float _defFreq;
 
 
   public:
 
-    Radio(uint8_t sdaPin, uint8_t sclPin) {
+    Radio(uint8_t sclPin, uint8_t sdaPin, float defFreq = 100.3) {
       _sdaPin = sdaPin;
       _sclPin = sclPin;
+      _defFreq = defFreq;
       _muted = false;
       _frequencyH = 0x00;
       _frequencyL = 0x00;
@@ -173,13 +175,17 @@ class Radio {
 };
 
 
-// sdaPin, sclPin
+// sclPin, sdaPin
 //Radio radio1(2, 3);
 //Radio radio2(4, 5);
 
 LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
-Radio myRadios[] = {Radio(23, 22), Radio(25, 24)};
+Radio myRadios[] = {Radio(22, 23), Radio(24, 25), Radio(26, 27), Radio(28, 29),
+                    Radio(30, 31), Radio(32, 33), Radio(34, 35), Radio(36, 37),
+                    Radio(38, 39), Radio(40, 41), Radio(42, 43), Radio(44, 45),
+                    Radio(46, 47), Radio(48, 49)
+                    };
 
 #define radiosLength (sizeof(myRadios) / sizeof(myRadios[0]))
 
@@ -196,10 +202,18 @@ void setup() {
   lastStateCLK = digitalRead(CLK);
 
   // Setup the radios
-  myRadios[0].begin();
-  myRadios[0].setFrequency(100.3);
-  myRadios[1].begin();
-  myRadios[1].setFrequency(96.0);
+  Serial.println("Initializing The Radios");
+  for (int i = 0; i < radiosLength; i++) {
+    Serial.print("Radio ");
+    Serial.print(i + 1);
+    Serial.print(" ...");
+
+    myRadios[i].begin();
+    myRadios[i].setFrequency(100.3);
+
+    Serial.println("OK");
+  }
+
 
   initScreen();
   delay(2000);
@@ -280,7 +294,7 @@ void readRotation() {
         changeRadioFrequency(currentDir);
       } else if (cursorLoc == 2) {
         changeRadioFrequency(currentDir);
-      }else if (cursorLoc == 3) {
+      } else if (cursorLoc == 3) {
         changeRadioMute();
       }
 
@@ -308,12 +322,14 @@ void changeRadioMute() {
 
 void changeRadioFrequency(String dir) {
 
-  if(cursorLoc == 1){
+  // Change to fine or course frequency adjustment depending on the blinking cursor position
+  if (cursorLoc == 1) {
     freqDx = 1;
-  }else if(cursorLoc == 2){
+  } else if (cursorLoc == 2) {
     freqDx = 0.01;
   }
-  
+
+  // Check if going clockwise or anticlockwise to change the frequency down or up depending on the freqDx value
   if (dir == "ADD") {
 
     frequency = myRadios[currentRadio].getFrequency() + freqDx;
@@ -341,20 +357,27 @@ void changeRadioIndex(String dir) {
     if (currentRadio >= radiosLength) {
       currentRadio = 0;
     }
-    Serial.print("Adding radio index to ");
-    Serial.println(currentRadio);
+
 
   } else {
     currentRadio -= 1;
     if (currentRadio < 0) {
       currentRadio = radiosLength - 1;
     }
-    Serial.print("Subtracting radio index to ");
-    Serial.println(currentRadio);
+
   }
+
+  Serial.print("Moving to radio at index ");
+  Serial.println(currentRadio);
 }
 
 void serialDisplayInfo() {
+  
+  Serial.print("Radio ");
+  Serial.print("0");
+  Serial.print(currentRadio + 1);
+  Serial.print(" :: ");
+  
   Serial.print("Frequency: ");
   Serial.print(myRadios[currentRadio].getFrequency());
   Serial.print(" MHz :: ");
@@ -371,10 +394,10 @@ void serialDisplayInfo() {
   Serial.print(myRadios[currentRadio].getSignalLevel());
   Serial.println(" ");
 
-  Serial.print("Direction: ");
-  Serial.print(currentDir);
-  Serial.print(" | Counter: ");
-  Serial.println(cursorLoc);
+  //  Serial.print("Direction: ");
+  //  Serial.print(currentDir);
+  //  Serial.print(" | Counter: ");
+  //  Serial.println(cursorLoc);
 }
 
 void displayMenu() {
@@ -407,7 +430,7 @@ void initScreen() {
   // Print a message to the LCD.
   lcd.backlight();
   lcd.setCursor(1, 0);
-  lcd.print("Globetrack INT");
+  lcd.print("GLOBETRACK INT");
   lcd.setCursor(4, 1);
   lcd.print("RADIOS");
 
