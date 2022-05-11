@@ -19,9 +19,9 @@ Vuuka FM - 95.4
 #include <LiquidCrystal_I2C.h>
 
 // Rotary Encoder Inputs
-#define CLK 10
-#define DT 11
-#define SW 12
+#define CLK 63
+#define DT 64
+#define SW 65
 
 float frequency = 100.30;
 int currentStateCLK;
@@ -179,7 +179,7 @@ class Radio {
 
 LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
-Radio myRadios[] = {Radio(2, 3), Radio(4, 5)};
+Radio myRadios[] = {Radio(23, 22), Radio(25, 24)};
 
 #define radiosLength (sizeof(myRadios) / sizeof(myRadios[0]))
 
