@@ -23,7 +23,7 @@
 #define DT 64
 #define SW 65
 
-float frequency = 100.30;
+float frequency;
 int currentStateCLK;
 int lastStateCLK;
 String currentDir = "";
@@ -56,7 +56,7 @@ class Radio {
 
   public:
 
-    Radio(uint8_t sclPin, uint8_t sdaPin, float defFreq = 100.3) {
+    Radio(uint8_t sclPin, uint8_t sdaPin, float defFreq) {
       _sdaPin = sdaPin;
       _sclPin = sclPin;
       _defFreq = defFreq;
@@ -73,7 +73,9 @@ class Radio {
       _myWire = myWire;
 
       _myWire.begin();
-
+      delay(10);
+      
+      setFrequency(_defFreq);
     }
 
     void sendValues() {
@@ -181,10 +183,10 @@ class Radio {
 
 LiquidCrystal_I2C lcd(0x3F, 16, 2);
 
-Radio myRadios[] = {Radio(22, 23), Radio(24, 25), Radio(26, 27), Radio(28, 29),
-                    Radio(30, 31), Radio(32, 33), Radio(34, 35), Radio(36, 37),
-                    Radio(38, 39), Radio(40, 41), Radio(42, 43), Radio(44, 45),
-                    Radio(46, 47), Radio(48, 49)
+Radio myRadios[] = {Radio(22, 23, 106.7), Radio(24, 25, 107.1), Radio(26, 27, 96.0), Radio(28, 29, 98.6),
+                    Radio(30, 31, 97.9), Radio(32, 33, 102.2), Radio(34, 35, 102.2), Radio(36, 37, 88.9),
+                    Radio(38, 39, 90.4), Radio(40, 41, 93.0), Radio(42, 43, 89.6), Radio(44, 45, 95.4),
+                    Radio(46, 47, 103.5), Radio(48, 49, 89.5)
                     };
 
 #define radiosLength (sizeof(myRadios) / sizeof(myRadios[0]))
@@ -209,7 +211,6 @@ void setup() {
     Serial.print(" ...");
 
     myRadios[i].begin();
-    myRadios[i].setFrequency(100.3);
 
     Serial.println("OK");
   }
